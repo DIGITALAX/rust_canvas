@@ -1,4 +1,4 @@
-use nannou::{color, prelude::*};
+use nannou::{color, draw::primitive::Ellipse, prelude::*};
 use nannou_egui::{egui, Egui};
 mod model;
 use model::{Model, PixelVec, Settings};
@@ -28,9 +28,13 @@ fn model(app: &App) -> Model {
             color: hsv(10.0, 0.5, 1.0),
             weight: 1.,
             shapes: false,
+            tool: 0,
         },
         PixelVec::new(),
+        Ellipse::default(),
         Vec::new(),
+        Vec::new(),
+        false,
     )
 }
 
@@ -40,12 +44,15 @@ fn update(_app: &App, model: &mut Model, update: Update) {
         ref mut settings,
         ref mut pixel_vec,
         ref mut global_vec,
+        ref mut ellipse,
+        ref mut tools_vec,
+        ref mut drawing,
     } = *model;
 
     egui.set_elapsed_time(update.since_start);
     let ctx = egui.begin_frame();
     egui::Window::new("Settings")
-        .default_size(egui::vec2(0.0, 200.0))
+        .default_size(egui::vec2(0.0, 600.0))
         .anchor(egui::Align2::LEFT_BOTTOM, egui::vec2(10., -10.))
         .resizable(false)
         .show(&ctx, |ui| {
@@ -56,23 +63,19 @@ fn update(_app: &App, model: &mut Model, update: Update) {
                 ui.add_space(10.);
                 ui.separator();
                 ui.label("Brush Size");
-                ui.add(egui::Slider::new(&mut settings.weight, 0.0..=100.0));
+                ui.add(egui::Slider::new(&mut settings.weight, 1.0..=100.0));
                 ui.add_space(10.);
-                ui.vertical(|ui| {
-                    ui.separator();
-                    let clicked = ui.button("Add Shape").clicked();
-                    if clicked {
-                        open_shapes(&mut settings.shapes);
-                    }
+                ui.separator();
+                let clicked = ui.button("Add Shape").clicked();
+                if clicked {
+                    open_shapes(&mut settings.shapes, &mut settings.tool);
+                }
+                ui.add_space(5.);
+                if settings.shapes {
+                    ui.button("Ellipse");
                     ui.add_space(5.);
-                    if settings.shapes {
-                        ui.horizontal(|ui| {
-                            ui.button("Ellipse");
-                            ui.add_space(5.);
-                            ui.button("Square");
-                        });
-                    }
-                })
+                    ui.button("Square");
+                }
             })
         });
 }
@@ -116,7 +119,7 @@ fn event(_app: &App, model: &mut Model, event: WindowEvent) {
         KeyReleased(_) => {}
         ReceivedCharacter(_) => {}
         MouseMoved(pos) => {
-            if model.pixel_vec.drawing {
+            if model.drawing {
                 model
                     .pixel_vec
                     .vec_pix
@@ -125,14 +128,20 @@ fn event(_app: &App, model: &mut Model, event: WindowEvent) {
         }
         MousePressed(pos) => match pos {
             MouseButton::Left => {
-                model.pixel_vec.drawing = true;
-                model.pixel_vec.weight.push(model.settings.weight);
+                model.tools_vec.push(model.settings.tool);
+                model.drawing = true;
+                if model.settings.tool == 0 {
+                    model.pixel_vec.weight.push(model.settings.weight);
+                } else if model.settings.tool == 1 {
+
+                }
             }
+
             _ => {}
         },
         MouseReleased(pos) => match pos {
             MouseButton::Left => {
-                model.pixel_vec.drawing = false;
+                model.drawing = false;
                 model.global_vec.push(model.pixel_vec.clone());
                 model.pixel_vec.vec_pix.clear();
             }
@@ -153,10 +162,12 @@ fn event(_app: &App, model: &mut Model, event: WindowEvent) {
     }
 }
 
-fn open_shapes(shapes: &mut bool) {
+fn open_shapes(shapes: &mut bool, tool: &mut i32) {
     if *shapes {
-        *shapes = false
+        *shapes = false;
+        *tool = 0
     } else {
-        *shapes = true
+        *shapes = true;
+        *tool = 1
     }
 }
