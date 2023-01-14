@@ -1,7 +1,9 @@
-use nannou::{color, draw::primitive::Ellipse, prelude::*};
+use nannou::{color, prelude::*};
 use nannou_egui::{egui, Egui};
+mod helpers;
 mod model;
-use model::{Model, PixelVec, Settings};
+use helpers::{open_shapes, set_shape};
+use model::{Ellipse, Model, PixelVec, Rectangle, Settings, Tools};
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -28,24 +30,26 @@ fn model(app: &App) -> Model {
             color: hsv(10.0, 0.5, 1.0),
             weight: 1.,
             shapes: false,
-            tool: 0,
+            tool: Tools::Pencil,
         },
         PixelVec::new(),
-        Ellipse::default(),
+        Ellipse::new(),
+        Rectangle::new(),
         Vec::new(),
         Vec::new(),
         false,
     )
 }
 
-fn update(_app: &App, model: &mut Model, update: Update) {
+fn update(app: &App, model: &mut Model, update: Update) {
     let Model {
         ref mut egui,
         ref mut settings,
-        ref mut pixel_vec,
-        ref mut global_vec,
+        ref mut pencil,
+        ref mut elements,
         ref mut ellipse,
-        ref mut tools_vec,
+        ref mut rect,
+        ref mut tools_type,
         ref mut drawing,
     } = *model;
 
@@ -66,15 +70,21 @@ fn update(_app: &App, model: &mut Model, update: Update) {
                 ui.add(egui::Slider::new(&mut settings.weight, 1.0..=100.0));
                 ui.add_space(10.);
                 ui.separator();
-                let clicked = ui.button("Add Shape").clicked();
+                let shape_button = egui::Button::new("Add Shape").fill(egui::Color32::BLACK);
+                let clicked = ui.add(shape_button).clicked();
+
                 if clicked {
-                    open_shapes(&mut settings.shapes, &mut settings.tool);
+                    open_shapes(&mut settings.shapes);
                 }
                 ui.add_space(5.);
                 if settings.shapes {
-                    ui.button("Ellipse");
+                    let ell = ui.button("Ellipse").clicked();
                     ui.add_space(5.);
-                    ui.button("Square");
+                    let rectangle = ui.button("Rectangle").clicked();
+
+                    if rectangle || ell {
+                        set_shape(ell, rectangle, &mut settings.tool, ellipse, rect);
+                    }
                 }
             })
         });
@@ -86,9 +96,8 @@ fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event:
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
-
     frame.clear(BLACK);
-    model.display(&draw);
+    model.display(&draw, &app);
     draw.to_frame(app, &frame).unwrap();
     model.egui.draw_to_frame(&frame).unwrap();
 }
@@ -112,7 +121,7 @@ fn edit_hsv(ui: &mut egui::Ui, color: &mut Hsv) {
     }
 }
 
-fn event(_app: &App, model: &mut Model, event: WindowEvent) {
+fn event(app: &App, model: &mut Model, event: WindowEvent) {
     match event {
         Moved(_) => {}
         KeyPressed(_) => {}
@@ -120,20 +129,46 @@ fn event(_app: &App, model: &mut Model, event: WindowEvent) {
         ReceivedCharacter(_) => {}
         MouseMoved(pos) => {
             if model.drawing {
-                model
-                    .pixel_vec
-                    .vec_pix
-                    .push((pt2(pos.x, pos.y), model.settings.color));
+                match model.settings.tool {
+                    Tools::Pencil => {
+                        model
+                            .pencil
+                            .vec_pix
+                            .push((pt2(pos.x, pos.y), model.settings.color));
+                    }
+                    Tools::Ellipse => {
+                        model.ellipse.radius = ((app.mouse.x - model.ellipse.center.x).pow(2)
+                            as f32
+                            - (app.mouse.y - model.ellipse.center.y).pow(2) as f32)
+                            .sqrt();
+                        model.ellipse.weight = model.settings.weight;
+                        model.ellipse.color = model.settings.color;
+                    }
+                    Tools::Rect => {
+                        model.rect.color = model.settings.color;
+                        model.rect.weight = model.settings.weight;
+                        model.rect.width = (app.mouse.x - model.rect.start.x).abs();
+                        model.rect.height = (app.mouse.y - model.rect.start.y).abs();
+                        println!(
+                            "width {} and height {}",
+                            model.rect.width, model.rect.height
+                        );
+                    }
+                    Tools::Rubber => {}
+                }
             }
         }
         MousePressed(pos) => match pos {
             MouseButton::Left => {
-                model.tools_vec.push(model.settings.tool);
+                model.tools_type.push(model.settings.tool.clone());
                 model.drawing = true;
-                if model.settings.tool == 0 {
-                    model.pixel_vec.weight.push(model.settings.weight);
-                } else if model.settings.tool == 1 {
-
+                match model.settings.tool {
+                    Tools::Pencil => {
+                        model.pencil.weight.push(model.settings.weight);
+                    }
+                    Tools::Ellipse => model.ellipse.center = pt2(app.mouse.x, app.mouse.y),
+                    Tools::Rect => model.rect.start = pt2(app.mouse.x, app.mouse.y),
+                    Tools::Rubber => {}
                 }
             }
 
@@ -142,8 +177,15 @@ fn event(_app: &App, model: &mut Model, event: WindowEvent) {
         MouseReleased(pos) => match pos {
             MouseButton::Left => {
                 model.drawing = false;
-                model.global_vec.push(model.pixel_vec.clone());
-                model.pixel_vec.vec_pix.clear();
+                match model.settings.tool {
+                    Tools::Pencil => {
+                        model.elements.push(model.pencil.clone());
+                        model.pencil.vec_pix.clear();
+                    }
+                    Tools::Ellipse => {}
+                    Tools::Rect => {}
+                    Tools::Rubber => {}
+                }
             }
             _ => {}
         },
@@ -159,15 +201,5 @@ fn event(_app: &App, model: &mut Model, event: WindowEvent) {
         Focused => {}
         Unfocused => {}
         Closed => {}
-    }
-}
-
-fn open_shapes(shapes: &mut bool, tool: &mut i32) {
-    if *shapes {
-        *shapes = false;
-        *tool = 0
-    } else {
-        *shapes = true;
-        *tool = 1
     }
 }

@@ -1,12 +1,37 @@
-use nannou::image::{load_from_memory, DynamicImage};
-use reqwest;
+use nannou_egui::egui::Button;
 
-pub fn get_image(img_name: &str, url: &str) -> Result<DynamicImage, Box<dyn std::error::Error>> {
+use crate::model::{Ellipse, Rectangle, Tools};
 
-    let target_url = url.to_string() + img_name;
-    let resp_bytes = reqwest::blocking::get(&target_url)?.bytes()?;
-    let dyn_image = load_from_memory(&resp_bytes)?;
- //    image::load_from_memory(&resp_bytes)?       
- //           .save_with_format("test.png", ImageFormat::Png)?;
-    Ok(dyn_image)
+pub fn open_shapes(shapes: &mut bool) {
+    if *shapes {
+        *shapes = false;
+    } else {
+        *shapes = true;
+    }
+}
+
+pub fn set_shape(
+    ell_clicked: bool,
+    rect_clicked: bool,
+    tool: &mut Tools,
+    ellipse: &mut Ellipse,
+    rect: &mut Rectangle,
+) {
+    if ell_clicked {
+        if ellipse.clicked {
+            *tool = Tools::Pencil;
+            ellipse.clicked = false;
+        } else {
+            *tool = Tools::Ellipse;
+            ellipse.clicked = true;
+        }
+    } else if rect_clicked {
+        if rect.clicked {
+            *tool = Tools::Rect;
+            rect.clicked = false;
+        } else {
+            *tool = Tools::Rect;
+            rect.clicked = true;
+        }
+    }
 }
