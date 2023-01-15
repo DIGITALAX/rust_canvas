@@ -3,7 +3,7 @@ use nannou_egui::{egui, Egui};
 mod helpers;
 mod model;
 use helpers::{open_shapes, set_shape};
-use model::{Ellipse, Model, PixelVec, Rectangle, Settings, Tools};
+use model::{Elements, Ellipse, Model, PixelVec, Rectangle, Settings, Tools};
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -38,6 +38,7 @@ fn model(app: &App) -> Model {
         Vec::new(),
         Vec::new(),
         false,
+        Vec::new(),
     )
 }
 
@@ -51,6 +52,7 @@ fn update(app: &App, model: &mut Model, update: Update) {
         ref mut rect,
         ref mut tools_type,
         ref mut drawing,
+        ref mut weight,
     } = *model;
 
     egui.set_elapsed_time(update.since_start);
@@ -97,6 +99,33 @@ fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event:
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     frame.clear(BLACK);
+
+    for (index, elem) in model.elements.iter().enumerate() {
+        match elem {
+            Elements::Pencil(pencil) => {
+                draw.polyline()
+                    .weight(model.weight[index])
+                    .start_cap_round()
+                    .caps_round()
+                    .end_cap_round()
+                    .join_round()
+                    .points_colored(pencil.vec_pix.clone());
+            }
+            Elements::Rect(rect) => {
+                draw.rect()
+                    .xy(rect.start)
+                    .w_h(rect.width, rect.height)
+                    .color(rect.color);
+            }
+            Elements::Ellipse(ellipse) => {
+                draw.ellipse()
+                    .xy(ellipse.center)
+                    .color(ellipse.color)
+                    .radius(ellipse.radius);
+            }
+            Elements::Rubber => {}
+        }
+    }
     model.display(&draw, &app);
     draw.to_frame(app, &frame).unwrap();
     model.egui.draw_to_frame(&frame).unwrap();
@@ -123,10 +152,6 @@ fn edit_hsv(ui: &mut egui::Ui, color: &mut Hsv) {
 
 fn event(app: &App, model: &mut Model, event: WindowEvent) {
     match event {
-        Moved(_) => {}
-        KeyPressed(_) => {}
-        KeyReleased(_) => {}
-        ReceivedCharacter(_) => {}
         MouseMoved(pos) => {
             if model.drawing {
                 match model.settings.tool {
@@ -147,12 +172,8 @@ fn event(app: &App, model: &mut Model, event: WindowEvent) {
                     Tools::Rect => {
                         model.rect.color = model.settings.color;
                         model.rect.weight = model.settings.weight;
-                        model.rect.width = (app.mouse.x - model.rect.start.x).abs();
-                        model.rect.height = (app.mouse.y - model.rect.start.y).abs();
-                        println!(
-                            "width {} and height {}",
-                            model.rect.width, model.rect.height
-                        );
+                        model.rect.width = ((app.mouse.x) - (model.rect.start.x)).abs();
+                        model.rect.height = ((app.mouse.y) - (model.rect.start.y)).abs();
                     }
                     Tools::Rubber => {}
                 }
@@ -162,10 +183,9 @@ fn event(app: &App, model: &mut Model, event: WindowEvent) {
             MouseButton::Left => {
                 model.tools_type.push(model.settings.tool.clone());
                 model.drawing = true;
+                model.weight.push(model.settings.weight);
                 match model.settings.tool {
-                    Tools::Pencil => {
-                        model.pencil.weight.push(model.settings.weight);
-                    }
+                    Tools::Pencil => {}
                     Tools::Ellipse => model.ellipse.center = pt2(app.mouse.x, app.mouse.y),
                     Tools::Rect => model.rect.start = pt2(app.mouse.x, app.mouse.y),
                     Tools::Rubber => {}
@@ -179,27 +199,22 @@ fn event(app: &App, model: &mut Model, event: WindowEvent) {
                 model.drawing = false;
                 match model.settings.tool {
                     Tools::Pencil => {
-                        model.elements.push(model.pencil.clone());
+                        model.elements.push(Elements::Pencil(model.pencil.clone()));
                         model.pencil.vec_pix.clear();
                     }
-                    Tools::Ellipse => {}
-                    Tools::Rect => {}
+                    Tools::Ellipse => {
+                        model
+                            .elements
+                            .push(Elements::Ellipse(model.ellipse.clone()));
+                    }
+                    Tools::Rect => {
+                        model.elements.push(Elements::Rect(model.rect.clone()));
+                    }
                     Tools::Rubber => {}
                 }
             }
             _ => {}
         },
-        MouseEntered => {}
-        MouseExited => {}
-        MouseWheel(_, _) => {}
-        Resized(_) => {}
-        HoveredFile(_) => {}
-        DroppedFile(_) => {}
-        HoveredFileCancelled => {}
-        Touch(_) => {}
-        TouchPressure(_) => {}
-        Focused => {}
-        Unfocused => {}
-        Closed => {}
+        _ => {}
     }
 }

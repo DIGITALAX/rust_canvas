@@ -1,4 +1,4 @@
-use nannou::{color, prelude::*};
+use nannou::prelude::*;
 use nannou_egui::Egui;
 
 // tool mapping
@@ -8,6 +8,7 @@ pub enum Elements {
     Pencil(PixelVec),
     Rect(Rectangle),
     Ellipse(Ellipse),
+    Rubber,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -26,6 +27,7 @@ pub struct Settings {
     pub tool: Tools,
 }
 
+#[derive(Clone)]
 pub struct Ellipse {
     pub center: Vec2,
     pub color: Hsv,
@@ -46,6 +48,7 @@ impl Ellipse {
     }
 }
 
+#[derive(Clone)]
 pub struct Rectangle {
     pub start: Point2,
     pub width: f32,
@@ -71,14 +74,12 @@ impl Rectangle {
 #[derive(Clone)]
 pub struct PixelVec {
     pub vec_pix: Vec<(Point2, Hsv)>,
-    pub weight: Vec<f32>,
 }
 
 impl PixelVec {
     pub fn new() -> Self {
         Self {
             vec_pix: Vec::new(),
-            weight: Vec::new(),
         }
     }
 }
@@ -92,6 +93,7 @@ pub struct Model {
     pub elements: Vec<Elements>,
     pub tools_type: Vec<Tools>,
     pub drawing: bool,
+    pub weight: Vec<f32>,
 }
 
 impl Model {
@@ -104,6 +106,7 @@ impl Model {
         elements: Vec<Elements>,
         tools_type: Vec<Tools>,
         drawing: bool,
+        weight: Vec<f32>,
     ) -> Self {
         Model {
             egui,
@@ -114,62 +117,37 @@ impl Model {
             elements,
             tools_type,
             drawing,
+            weight,
         }
     }
 
     pub fn display(&self, draw: &Draw, app: &App) {
-        let mouse_pos = pt2(app.mouse.x, app.mouse.y);
-        for index in self.elements.iter().enumerate() {
-            println!("here {:?}", self.tools_type[index.0]);
-            match self.tools_type[index.0] {
-                Tools::Pencil => free_draw(self, draw),
-                Tools::Ellipse => draw_ellipse(self, draw),
-                Tools::Rect => draw_rect(self, draw),
-                Tools::Rubber => {}
+        match self.settings.tool {
+            Tools::Pencil => {
+                draw.polyline()
+                    .start_cap_round()
+                    .caps_round()
+                    .end_cap_round()
+                    .join_round()
+                    .stroke_weight(self.settings.weight)
+                    .points_colored(self.pencil.vec_pix.clone());
             }
+            Tools::Ellipse => {
+                draw.ellipse()
+                    .xy(self.ellipse.center)
+                    .color(self.settings.color)
+                    .radius(self.ellipse.radius);
+            }
+            Tools::Rect => {
+                draw.rect()
+                    .xy(self.rect.start)
+                    .width(self.rect.width)
+                    .height(self.rect.height)
+                    .color(self.rect.color);
+            }
+            Tools::Rubber => {}
         }
     }
-}
-
-pub fn free_draw(model: &Model, draw: &Draw) {
-    if !model.pencil.vec_pix.is_empty() {
-        draw.polyline()
-            .start_cap_round()
-            .caps_round()
-            .end_cap_round()
-            .join_round()
-            .stroke_weight(model.pencil.weight[model.pencil.weight.len() - 1])
-            .points_colored(model.pencil.vec_pix.clone());
-    }
-
-    for (index, elem) in model.elements.iter().enumerate() {
-        draw.polyline()
-            .start_cap_round()
-            .caps_round()
-            .end_cap_round()
-            .join_round()
-            .stroke_weight(model.pencil.weight[index])
-            .points_colored(elem.vec_pix.clone());
-    }
-}
-
-pub fn draw_ellipse(model: &Model, draw: &Draw) {
-    draw.ellipse()
-        .xy(model.ellipse.center)
-        .color(model.ellipse.color)
-        .stroke_weight(model.ellipse.weight)
-        .stroke_color(model.ellipse.color)
-        .radius(model.ellipse.radius);
-}
-
-pub fn draw_rect(model: &Model, draw: &Draw) {
-    draw.rect()
-        .xy(model.rect.start)
-        .width(model.rect.width)
-        .height(model.rect.height)
-        .stroke_weight(model.rect.weight)
-        .stroke_color(model.ellipse.color)
-        .color(model.rect.color);
 }
 
 fn check_range(p: &Vec2, m: Vec2, r: f32) -> bool {
@@ -182,12 +160,12 @@ fn check_range(p: &Vec2, m: Vec2, r: f32) -> bool {
     }
 }
 
-pub fn erase_elements(model: &mut Model, mouse_pos: Vec2) {
-    model.elements.iter_mut().for_each(|pencil| {
-        pencil.vec_pix.iter_mut().for_each(|(p, c)| {
-            if check_range(p, mouse_pos, 5.) {
-                *c = color::hsv(0., 0., 0.)
-            }
-        });
-    });
-}
+// pub fn erase_elements(pencil: &mut Model, mouse_pos: Vec2) {
+//     model.elements.iter_mut().for_each(|pencil| {
+//         pencil.vec_pix.iter_mut().for_each(|(p, c)| {
+//             if check_range(p, mouse_pos, 5.) {
+//                 *c = color::hsv(0., 0., 0.)
+//             }
+//         });
+//     });
+// }

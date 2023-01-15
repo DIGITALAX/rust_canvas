@@ -27,7 +27,7 @@ pub fn set_shape(
         }
     } else if rect_clicked {
         if rect.clicked {
-            *tool = Tools::Rect;
+            *tool = Tools::Pencil;
             rect.clicked = false;
         } else {
             *tool = Tools::Rect;
