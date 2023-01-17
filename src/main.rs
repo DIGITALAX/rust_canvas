@@ -140,48 +140,6 @@ fn edit_hsv(ui: &mut egui::Ui, color: &mut Hsv) {
 
 fn event(app: &App, model: &mut Model, event: WindowEvent) {
     match event {
-        // MouseMoved(pos) => {
-        //     if model.drawing {
-        //         match model.get_settings().get_tool() {
-        //             Tool::Pencil => {
-        //                 model
-        //                    .set_line();
-        //                 app.set_loop_mode(LoopMode::Rate {
-        //                     update_interval: std::time::Duration::from_millis(1),
-        //                 })
-        //             }
-
-        //             Tool::Ellipse => {
-        //                 // model.get_ell().clone().set_radius(
-        //                 //     (((app.mouse.x - model.get_ell().clone().get_center().x).pow(2)
-        //                 //         as f32)
-        //                 //         - ((app.mouse.y - model.get_ell().clone().get_center().y).pow(2)
-        //                 //             as f32))
-        //                 //         .sqrt(),
-        //                 // );
-        //                 // model
-        //                 //     .get_ell()
-        //                 //     .clone()
-        //                 //     .set_weight(model.get_settings().clone().get_weight());
-        //                 // model
-        //                 //     .get_ell()
-        //                 //     .clone()
-        //                 //     .set_color(model.get_settings().get_color());
-        //             }
-        //             Tool::Rect => {
-        //                 // model.rect.set_color(model.get_settings().get_color());
-        //                 // model.rect.set_weight(model.get_settings().get_weight());
-        //                 // model
-        //                 //     .rect
-        //                 //     .set_width(((app.mouse.x) - (model.rect.get_start().x)).abs());
-        //                 // model
-        //                 //     .rect
-        //                 //     .set_height(((app.mouse.y) - (model.rect.get_start().y)).abs());
-        //             }
-        //             Tool::Rubber => {}
-        //         }
-        //     }
-        // }
         MousePressed(pos) => match pos {
             MouseButton::Left => {
                 model.set_drawing(true);
@@ -194,7 +152,10 @@ fn event(app: &App, model: &mut Model, event: WindowEvent) {
                         model.rect.set_center(pt2(app.mouse.x, app.mouse.y));
                         model.rect.set_color(model.get_settings().get_color())
                     }
-                    Tool::Ellipse => model.ellipse.set_center(pt2(app.mouse.x, app.mouse.y)),
+                    Tool::Ellipse => {
+                        model.ellipse.set_center(pt2(app.mouse.x, app.mouse.y));
+                        model.ellipse.set_color(model.get_settings().get_color())
+                    }
                     _ => {}
                 }
             }

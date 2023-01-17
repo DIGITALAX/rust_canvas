@@ -16,8 +16,6 @@ pub trait Forms {
     fn get_color(&self) -> Hsv;
     fn set_center(&mut self, center: Vec2);
     fn get_center(&self) -> Vec2;
-    fn set_wh(&mut self, wh: Vec2);
-    fn get_wh(&self) -> Vec2;
     fn get_clicked(&self) -> bool;
     fn set_clicked(&mut self, clicked: bool);
 }
@@ -56,18 +54,13 @@ impl Forms for Rectangle {
     fn get_center(&self) -> Vec2 {
         self.center
     }
-    fn get_wh(&self) -> Vec2 {
-        self.wh
-    }
     fn get_clicked(&self) -> bool {
         self.clicked
     }
     fn set_center(&mut self, center: Vec2) {
         self.center = center
     }
-    fn set_wh(&mut self, center: Vec2) {
-        self.wh = center
-    }
+
     fn set_clicked(&mut self, clicked: bool) {
         self.clicked = clicked
     }
@@ -82,13 +75,21 @@ impl Rectangle {
             clicked,
         }
     }
+
+   pub fn get_wh(&self) -> Vec2 {
+        self.wh
+    }
+
+    pub fn set_wh(&mut self, center: Vec2) {
+        self.wh = center
+    }
 }
 
 #[derive(Clone, Default)]
 pub struct Ellipse {
     center: Point2,
     color: Hsv,
-    wh: Point2,
+    radius: f32,
     clicked: bool,
 }
 
@@ -96,7 +97,7 @@ impl Forms for Ellipse {
     fn draw_elem(&self, draw: &Draw) {
         draw.ellipse()
             .xy(self.center)
-            .radius(self.wh.x)
+            .radius(self.radius)
             .color(self.color);
     }
     fn set_color(&mut self, color: Hsv) {
@@ -108,17 +109,11 @@ impl Forms for Ellipse {
     fn get_center(&self) -> Vec2 {
         self.center
     }
-    fn get_wh(&self) -> Vec2 {
-        self.wh
-    }
     fn get_clicked(&self) -> bool {
         self.clicked
     }
     fn set_center(&mut self, center: Vec2) {
         self.center = center
-    }
-    fn set_wh(&mut self, center: Vec2) {
-        self.wh = center
     }
     fn set_clicked(&mut self, clicked: bool) {
         self.clicked = clicked
@@ -126,13 +121,21 @@ impl Forms for Ellipse {
 }
 
 impl Ellipse {
-    pub fn new(center: Vec2, color: Hsv, wh: Vec2, clicked: bool) -> Self {
+    pub fn new(center: Vec2, color: Hsv, radius: f32, clicked: bool) -> Self {
         Self {
             center,
             color,
-            wh,
+            radius,
             clicked,
         }
+    }
+
+    pub fn get_radius(&self) -> f32 {
+        self.radius
+    }
+
+    pub fn set_radius(&mut self, radius: f32) {
+        self.radius = radius
     }
 }
 

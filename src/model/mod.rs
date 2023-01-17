@@ -86,7 +86,7 @@ impl Model {
                 draw.ellipse()
                     .xy(self.ellipse.get_center())
                     .color(self.get_settings().get_color())
-                    .radius(self.ellipse.get_center().x);
+                    .radius(self.ellipse.get_radius());
             }
             Tool::Rect => {
                 draw.rect()
@@ -154,6 +154,12 @@ impl Model {
                 Tool::Rect => self
                     .rect
                     .set_wh((mouse_pos - self.rect.get_center()).abs() * 2.),
+                Tool::Ellipse => self.ellipse.set_radius(
+                    ((mouse_pos.x - self.ellipse.get_center().x).pow(2) as f32
+                        - (mouse_pos.y - self.ellipse.get_center().y).pow(2) as f32)
+                        .sqrt()
+                        * 2.,
+                ),
                 _ => {}
             }
         }
