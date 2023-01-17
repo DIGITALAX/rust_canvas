@@ -1,151 +1,161 @@
 use nannou::prelude::*;
 use nannou_egui::Egui;
-
-// tool mapping
-// 0 -> drawing, 1 -> ellipse, 2 -> square
-
-pub enum Elements {
-    Pencil(PixelVec),
-    Rect(Rectangle),
-    Ellipse(Ellipse),
-    Rubber,
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum Tools {
-    Pencil,
-    Rect,
-    Ellipse,
-    Rubber,
-}
+pub(crate) mod elements;
+use self::elements::{Forms, Pencil};
+use elements::{Elements, Ellipse, Line, Rectangle, Tool};
 
 #[derive(Clone)]
 pub struct Settings {
     pub color: Hsv,
     pub weight: f32,
-    pub shapes: bool,
-    pub tool: Tools,
+    shapes: bool,
 }
 
-#[derive(Clone)]
-pub struct Ellipse {
-    pub center: Vec2,
-    pub color: Hsv,
-    pub weight: f32,
-    pub radius: f32,
-    pub clicked: bool,
-}
-
-impl Ellipse {
-    pub fn new() -> Self {
+impl Settings {
+    pub fn new(color: Hsv, weight: f32, shapes: bool) -> Self {
         Self {
-            center: pt2(0., 0.),
-            color: hsv(10.0, 0.5, 1.0),
-            weight: 1.,
-            radius: 0.,
-            clicked: false,
+            color,
+            weight,
+            shapes,
         }
     }
-}
 
-#[derive(Clone)]
-pub struct Rectangle {
-    pub start: Point2,
-    pub width: f32,
-    pub height: f32,
-    pub color: Hsv,
-    pub weight: f32,
-    pub clicked: bool,
-}
-
-impl Rectangle {
-    pub fn new() -> Self {
-        Self {
-            start: pt2(0., 0.),
-            width: 0.,
-            height: 0.,
-            color: hsv(10.0, 0.5, 1.0),
-            weight: 1.,
-            clicked: false,
-        }
+    pub fn set_shapes(&mut self, shape: bool) {
+        self.shapes = shape
     }
-}
 
-#[derive(Clone)]
-pub struct PixelVec {
-    pub vec_pix: Vec<(Point2, Hsv)>,
-}
+    pub fn get_weight(&self) -> f32 {
+        self.weight
+    }
 
-impl PixelVec {
-    pub fn new() -> Self {
-        Self {
-            vec_pix: Vec::new(),
-        }
+    pub fn get_color(&self) -> Hsv {
+        self.color
+    }
+
+    pub fn get_shapes(&self) -> bool {
+        self.shapes
     }
 }
 
 pub struct Model {
     pub egui: Egui,
     pub settings: Settings,
-    pub pencil: PixelVec,
+    pub line: Line,
     pub ellipse: Ellipse,
     pub rect: Rectangle,
     pub elements: Vec<Elements>,
-    pub tools_type: Vec<Tools>,
+    pub tool: Tool,
     pub drawing: bool,
-    pub weight: Vec<f32>,
 }
 
 impl Model {
     pub fn new(
         egui: Egui,
         settings: Settings,
-        pencil: PixelVec,
+        line: Line,
         ellipse: Ellipse,
         rect: Rectangle,
         elements: Vec<Elements>,
-        tools_type: Vec<Tools>,
+        tool: Tool,
         drawing: bool,
-        weight: Vec<f32>,
     ) -> Self {
         Model {
             egui,
             settings,
-            pencil,
+            line,
             ellipse,
             rect,
             elements,
-            tools_type,
+            tool,
             drawing,
-            weight,
         }
     }
 
-    pub fn display(&self, draw: &Draw, app: &App) {
-        match self.settings.tool {
-            Tools::Pencil => {
+    pub fn display(&self, draw: &Draw, _app: &App) {
+        match self.tool {
+            Tool::Pencil => {
                 draw.polyline()
                     .start_cap_round()
                     .caps_round()
                     .end_cap_round()
                     .join_round()
-                    .stroke_weight(self.settings.weight)
-                    .points_colored(self.pencil.vec_pix.clone());
+                    .stroke_weight(self.get_line().get_weight())
+                    .points_colored(self.get_line().get_pixels());
             }
-            Tools::Ellipse => {
+            Tool::Ellipse => {
                 draw.ellipse()
-                    .xy(self.ellipse.center)
-                    .color(self.settings.color)
-                    .radius(self.ellipse.radius);
+                    .xy(self.ellipse.get_center())
+                    .color(self.get_settings().get_color())
+                    .radius(self.ellipse.get_center().x);
             }
-            Tools::Rect => {
+            Tool::Rect => {
                 draw.rect()
-                    .xy(self.rect.start)
-                    .width(self.rect.width)
-                    .height(self.rect.height)
-                    .color(self.rect.color);
+                    .xy(self.rect.get_center())
+                    .width(self.rect.get_wh().x)
+                    .height(self.rect.get_wh().y)
+                    .color(self.rect.get_color());
             }
-            Tools::Rubber => {}
+            Tool::Rubber => {}
+        }
+    }
+
+    pub fn get_drawing(&self) -> bool {
+        self.drawing
+    }
+
+    pub fn get_settings(&self) -> &Settings {
+        &self.settings
+    }
+
+    pub fn get_tool(&mut self) -> &Tool {
+        &self.tool
+    }
+
+    pub fn set_tool(&mut self, tool: Tool) {
+        self.tool = tool
+    }
+
+    pub fn get_elements(&self) -> &Vec<Elements> {
+        &self.elements
+    }
+
+    pub fn get_line(&self) -> &Line {
+        &self.line
+    }
+
+    pub fn get_mut_line(&mut self) -> &mut Line {
+        &mut self.line
+    }
+
+    pub fn get_ellipse(&self) -> &Ellipse {
+        &self.ellipse
+    }
+
+    pub fn get_rectangle(&self) -> &Rectangle {
+        &self.rect
+    }
+
+    pub fn set_line(&mut self) {
+        self.elements.push(Elements::L(Box::new(self.line.clone())))
+    }
+
+    pub fn set_drawing(&mut self, drawing: bool) {
+        self.drawing = drawing
+    }
+
+    pub fn update(&mut self, app: &App) {
+        let mouse_pos = pt2(app.mouse.x, app.mouse.y);
+        if self.get_drawing() {
+            match self.tool {
+                Tool::Pencil => self
+                    .line
+                    .pixels
+                    .push((mouse_pos, self.get_settings().get_color())),
+                Tool::Rect => self
+                    .rect
+                    .set_wh((mouse_pos - self.rect.get_center()).abs() * 2.),
+                _ => {}
+            }
         }
     }
 }
