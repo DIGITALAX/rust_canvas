@@ -1,8 +1,7 @@
 use nannou::prelude::*;
 use nannou_egui::Egui;
 pub(crate) mod elements;
-use self::elements::{Forms, Pencil};
-use elements::{Elements, Ellipse, Line, Rectangle, Tool};
+use elements::{Elements, Ellipse, Forms, Line, Pencil, Rectangle, Rectangle_Custom, Tool};
 
 #[derive(Clone)]
 pub struct Settings {
@@ -43,6 +42,7 @@ pub struct Model {
     pub line: Line,
     pub ellipse: Ellipse,
     pub rect: Rectangle,
+    pub rect_custom: Rectangle_Custom,
     pub elements: Vec<Elements>,
     pub tool: Tool,
     pub drawing: bool,
@@ -55,6 +55,7 @@ impl Model {
         line: Line,
         ellipse: Ellipse,
         rect: Rectangle,
+        rect_custom: Rectangle_Custom,
         elements: Vec<Elements>,
         tool: Tool,
         drawing: bool,
@@ -65,6 +66,7 @@ impl Model {
             line,
             ellipse,
             rect,
+            rect_custom,
             elements,
             tool,
             drawing,
@@ -95,6 +97,13 @@ impl Model {
                     .height(self.rect.get_wh().y)
                     .color(self.rect.get_color());
             }
+            Tool::Rect_Custom => {
+                draw.rect()
+                    .xy(self.rect_custom.get_center())
+                    .width(self.rect_custom.get_wh().x)
+                    .height(self.rect_custom.get_wh().y)
+                    .color(self.rect_custom.get_color());
+            }
             Tool::Rubber => {}
         }
     }
@@ -111,32 +120,29 @@ impl Model {
         &self.tool
     }
 
-    pub fn set_tool(&mut self, tool: Tool) {
-        self.tool = tool
-    }
-
-    pub fn get_elements(&self) -> &Vec<Elements> {
-        &self.elements
-    }
-
     pub fn get_line(&self) -> &Line {
         &self.line
+    }
+
+    pub fn get_rect_line(&self) -> &Rectangle_Custom {
+        &self.rect_custom
     }
 
     pub fn get_mut_line(&mut self) -> &mut Line {
         &mut self.line
     }
 
-    pub fn get_ellipse(&self) -> &Ellipse {
-        &self.ellipse
-    }
-
-    pub fn get_rectangle(&self) -> &Rectangle {
-        &self.rect
+    pub fn get_mut_rect_line(&mut self) -> &mut Rectangle_Custom {
+        &mut self.rect_custom
     }
 
     pub fn set_line(&mut self) {
         self.elements.push(Elements::L(Box::new(self.line.clone())))
+    }
+
+    pub fn set_rect_line(&mut self) {
+        self.elements
+            .push(Elements::L(Box::new(self.rect_custom.clone())))
     }
 
     pub fn set_drawing(&mut self, drawing: bool) {
@@ -160,6 +166,11 @@ impl Model {
                         .sqrt()
                         * 2.,
                 ),
+                Tool::Rect_Custom => {
+                    self.rect_custom
+                        .set_wh((mouse_pos - self.rect_custom.get_center()).abs() * 2.);
+                }
+
                 _ => {}
             }
         }

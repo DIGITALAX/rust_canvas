@@ -1,10 +1,12 @@
+// use diffusion::text_2_image;
 use nannou::{color, prelude::*};
 use nannou_egui::{egui, Egui};
+mod diffusion;
 mod helpers;
 mod model;
 use helpers::open_shapes;
 use model::{
-    elements::{Elements, Ellipse, Forms, Line, Pencil, Rectangle, Tool},
+    elements::{Elements, Ellipse, Forms, Line, Pencil, Rectangle, Rectangle_Custom, Tool},
     Model, Settings,
 };
 
@@ -33,6 +35,7 @@ fn model(app: &App) -> Model {
         Line::new(),
         Ellipse::default(),
         Rectangle::default(),
+        Rectangle_Custom::default(),
         Vec::new(),
         Tool::Pencil,
         false,
@@ -49,6 +52,7 @@ fn update(app: &App, model: &mut Model, update: Update) {
         ref mut elements,
         ref mut ellipse,
         ref mut rect,
+        ref mut rect_custom,
         ref mut tool,
         ref mut drawing,
     } = *model;
@@ -95,6 +99,16 @@ fn update(app: &App, model: &mut Model, update: Update) {
                             rect.set_clicked(true);
                         }
                     });
+                    ui.add_space(5.);
+                    ui.button("Custom Rect").clicked().then(|| {
+                        if rect_custom.get_clicked() {
+                            *tool = Tool::Pencil;
+                            rect_custom.set_clicked(false);
+                        } else {
+                            *tool = Tool::Rect_Custom;
+                            rect_custom.set_clicked(true);
+                        }
+                    });
                 }
             })
         });
@@ -107,6 +121,11 @@ fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event:
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     frame.clear(BLACK);
+    // text_2_image("mountain and flowers");
+    // let texture = wgpu::Texture::from_path(app, "result.png").expect("load file error");
+    // draw.texture(&texture);
+
+    println!("elem length {}", model.elements.len());
 
     for elem in model.elements.iter() {
         match elem {
@@ -152,6 +171,12 @@ fn event(app: &App, model: &mut Model, event: WindowEvent) {
                         model.rect.set_center(pt2(app.mouse.x, app.mouse.y));
                         model.rect.set_color(model.get_settings().get_color())
                     }
+                    Tool::Rect_Custom => {
+                        model.rect_custom.set_center(pt2(app.mouse.x, app.mouse.y));
+                        model
+                            .rect_custom
+                            .set_color(model.get_settings().get_color());
+                    }
                     Tool::Ellipse => {
                         model.ellipse.set_center(pt2(app.mouse.x, app.mouse.y));
                         model.ellipse.set_color(model.get_settings().get_color())
@@ -177,6 +202,15 @@ fn event(app: &App, model: &mut Model, event: WindowEvent) {
                     Tool::Rect => model
                         .elements
                         .push(Elements::F(Box::new(model.rect.clone()))),
+                    Tool::Rect_Custom => {
+                        // transfer from rect into pixels here and push into the line i.e. the pixels and then clear it
+                        model
+                            .rect_custom
+                            .rect_to_pixels(pt2(app.mouse.x, app.mouse.y));
+                        model.set_rect_line();
+                        model.get_mut_rect_line().clear_line();
+                        app.set_loop_mode(LoopMode::RefreshSync)
+                    }
                     Tool::Rubber => {}
                 }
             }
