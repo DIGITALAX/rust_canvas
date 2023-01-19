@@ -125,8 +125,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // let texture = wgpu::Texture::from_path(app, "result.png").expect("load file error");
     // draw.texture(&texture);
 
-    println!("elem length {}", model.elements.len());
-
     for elem in model.elements.iter() {
         match elem {
             Elements::L(line) => line.draw_elem(&draw),
@@ -203,7 +201,6 @@ fn event(app: &App, model: &mut Model, event: WindowEvent) {
                         .elements
                         .push(Elements::F(Box::new(model.rect.clone()))),
                     Tool::Rect_Custom => {
-                        // transfer from rect into pixels here and push into the line i.e. the pixels and then clear it
                         model
                             .rect_custom
                             .rect_to_pixels(pt2(app.mouse.x, app.mouse.y));

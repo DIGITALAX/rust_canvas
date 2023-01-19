@@ -264,13 +264,10 @@ impl Rectangle_Custom {
     }
 
     pub fn rect_to_pixels(&mut self, rb_corner: Point2) {
-        let wh = ((rb_corner.x - self.get_center().x).pow(2) as f32
-            + (rb_corner.y - self.get_center().y).pow(2) as f32)
-            .sqrt();
+        
+        // need to put this in a new thread, now it is blocking
+        
         let d = rb_corner - self.get_center();
-        // self.rect
-        //     .set_wh(((d[0].pow(2) as f32).sqrt(), (d[0].pow(2) as f32).sqrt()).into());
-        // push custom
         let x1 = rb_corner.x - d.x * 2.;
         let x2 = rb_corner.x;
         let y1 = rb_corner.y - d.y * 2.;
@@ -280,98 +277,26 @@ impl Rectangle_Custom {
         let lb = pt2(x1, y2);
         let rt = pt2(x2, y1);
         let rb = pt2(x2, y2);
-        let mut point_count = Vec::from_iter(1..=21);
-        let width: f32 = ((rt.x - lt.x).pow(2) as f32 + (rt.y - lt.y).pow(2) as f32).sqrt();
-        let height: f32 = ((rb.x - rt.x).pow(2) as f32 + (rb.y - rt.y).pow(2) as f32).sqrt();
-        let pixels_per_width: f32 = width / (20.) as f32;
-        let pixels_per_height: f32 = height / (20.) as f32;
-        let mut width_counter = 0.;
-        let mut height_counter = 0.;
-        // for point in point_count.iter() {
-        //     self.rect_custom.pixels.push((
-        //         (lt.x + width_counter, lt.y).into(),
-        //         self.get_settings().get_color(),
-        //     ));
-        //     if point == &21 {
-        //         width_counter = 0.;
-        //     } else {
-        //         width_counter += pixels_per_width;
-        //     }
-        // }
-
-        // for point in point_count.iter() {
-        //     self.rect_custom.pixels.push((
-        //         (rt.x, rt.y - height_counter).into(),
-        //         self.get_settings().get_color(),
-        //     ));
-        //     if point == &21 {
-        //         height_counter = 0.;
-        //     } else {
-        //         height_counter += pixels_per_height;
-        //     }
-        // }
-
-        // for point in point_count.iter() {
-        //     self.rect_custom.pixels.push((
-        //         (rb.x - width_counter, rb.y).into(),
-        //         self.get_settings().get_color(),
-        //     ));
-        //     if point == &21 {
-        //         width_counter = 0.;
-        //     } else {
-        //         width_counter += pixels_per_width;
-        //     }
-        // }
-
-        // for point in point_count.iter() {
-        //     self.rect_custom.pixels.push((
-        //         (lb.x, lb.y + height_counter).into(),
-        //         self.get_settings().get_color(),
-        //     ));
-        //     if point == &21 {
-        //         height_counter = 0.;
-        //     } else {
-        //         height_counter += pixels_per_height;
-        //     }
-        // }
 
         // create new lines
-        let mut height_counter = 0.;
-        let counter = ((lb.x - lt.x).pow(2) as f32 + (lb.y - lt.y).pow(2) as f32)
+        let height: i32 = ((lb.x - lt.x).pow(2) as f32 + (lb.y - lt.y).pow(2) as f32)
             .sqrt()
-            .floor();
-        let mut height_point_count = Vec::from_iter(1..=counter as i32);
-        for height_point in height_point_count.iter() {
-            for width_point in point_count.iter() {
+            .floor() as i32;
+        let width: i32 = ((rt.x - lt.x).pow(2) as f32 + (rt.y - lt.y).pow(2) as f32)
+            .sqrt()
+            .floor() as i32;
+        let mut height_counter = 0;
+        while height_counter < height {
+            let mut width_counter = 0;
+            while width_counter < width {
                 self.pixels.push((
-                    (lt.x + width_counter, lt.y - height_counter).into(),
+                    (lt.x + width_counter as f32, lt.y - height_counter as f32).into(),
                     self.get_color(),
                 ));
-
-                if width_point == &21 {
-                    width_counter = 0.;
-                } else {
-                    width_counter += pixels_per_width;
-                }
+                width_counter += 1;
             }
-
-            height_counter += 1.;
+            height_counter += 1;
         }
-        // self.rect_custom
-        //     .pixels
-        //     .push((lt, self.get_settings().get_color()));
-        // self.rect_custom
-        //     .pixels
-        //     .push((rt, self.get_settings().get_color()));
-        // self.rect_custom
-        //     .pixels
-        //     .push((rb, self.get_settings().get_color()));
-        // self.rect_custom
-        //     .pixels
-        //     .push((lb, self.get_settings().get_color()));
-        // self.rect_custom
-        //     .pixels
-        //     .push((lt, self.get_settings().get_color()));
     }
 
     pub fn get_wh(&self) -> Vec2 {
