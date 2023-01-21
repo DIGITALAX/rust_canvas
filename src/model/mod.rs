@@ -1,4 +1,4 @@
-use nannou::prelude::*;
+use nannou::{prelude::*, wgpu::Texture};
 use nannou_egui::Egui;
 pub(crate) mod elements;
 use elements::{Elements, Ellipse, Forms, Line, Pencil, Rectangle, Rectangle_Custom, Tool};
@@ -46,6 +46,9 @@ pub struct Model {
     pub elements: Vec<Elements>,
     pub tool: Tool,
     pub drawing: bool,
+    pub texture: Texture,
+    pub window_id: WindowId,
+    pub prompt: String
 }
 
 impl Model {
@@ -59,6 +62,9 @@ impl Model {
         elements: Vec<Elements>,
         tool: Tool,
         drawing: bool,
+        texture: Texture,
+        window_id: WindowId,
+        prompt: String
     ) -> Self {
         Model {
             egui,
@@ -70,6 +76,9 @@ impl Model {
             elements,
             tool,
             drawing,
+            texture,
+            window_id,
+            prompt
         }
     }
 
@@ -95,7 +104,10 @@ impl Model {
                     .xy(self.rect.get_center())
                     .width(self.rect.get_wh().x)
                     .height(self.rect.get_wh().y)
-                    .color(self.rect.get_color());
+                    .color(self.rect.get_color())
+                    .no_fill()
+                    .stroke_color(self.rect.get_color())
+                    .stroke_weight(self.settings.get_weight());
             }
             Tool::Rect_Custom => {
                 draw.rect()

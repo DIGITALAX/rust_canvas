@@ -1,4 +1,5 @@
 // use diffusion::text_2_image;
+use crate::egui::Event::Text;
 use nannou::{color, prelude::*};
 use nannou_egui::{egui, Egui};
 mod diffusion;
@@ -28,6 +29,9 @@ fn model(app: &App) -> Model {
         .unwrap();
 
     let window = app.window(window_id).unwrap();
+    app.set_exit_on_escape(false);
+
+    let texture = wgpu::Texture::from_path(app, "image.png").expect("load file error");
 
     Model::new(
         Egui::from_window(&window),
@@ -39,6 +43,9 @@ fn model(app: &App) -> Model {
         Vec::new(),
         Tool::Pencil,
         false,
+        texture,
+        window_id,
+        String::from("Enter Prompt"),
     )
 }
 
@@ -55,6 +62,9 @@ fn update(app: &App, model: &mut Model, update: Update) {
         ref mut rect_custom,
         ref mut tool,
         ref mut drawing,
+        ref mut texture,
+        ref mut window_id,
+        ref mut prompt,
     } = *model;
 
     egui.set_elapsed_time(update.since_start);
@@ -74,8 +84,7 @@ fn update(app: &App, model: &mut Model, update: Update) {
                 ui.add(egui::Slider::new(&mut settings.weight, 1.0..=100.0));
                 ui.add_space(10.);
                 ui.separator();
-                let shape_button = egui::Button::new("Add Shape").fill(egui::Color32::BLACK);
-                ui.add(shape_button)
+                ui.add(egui::Button::new("Add Shape").fill(egui::Color32::BLACK))
                     .clicked()
                     .then(|| open_shapes(settings));
                 ui.add_space(5.);
@@ -110,7 +119,19 @@ fn update(app: &App, model: &mut Model, update: Update) {
                         }
                     });
                 }
-            })
+            });
+            ui.vertical(|ui| {
+                ui.add_space(15.);
+                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.add(
+                        egui::TextEdit::multiline(&mut *prompt)
+                            .cursor_at_end(true)
+                            .desired_width(300.),
+                    );
+                    ui.add(egui::Button::new("Synth").fill(egui::Color32::BLACK));
+                })
+            });
         });
 }
 
@@ -122,8 +143,15 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     frame.clear(BLACK);
     // text_2_image("mountain and flowers");
-    // let texture = wgpu::Texture::from_path(app, "result.png").expect("load file error");
-    // draw.texture(&texture);
+
+    // 1. when we call sd we give it the w/h in the dimensions of the rectangle
+    // 2. when the image is synthed draw the image in the texture with width and height of the same dimensions
+    // 3. delete rectangle
+
+    draw.texture(&model.texture)
+        .height(400.)
+        .width(400.)
+        .xy(pt2(0., 0.));
 
     for elem in model.elements.iter() {
         match elem {

@@ -54,7 +54,13 @@ pub struct Rectangle {
 
 impl Forms for Rectangle {
     fn draw_elem(&self, draw: &Draw) {
-        draw.rect().xy(self.center).wh(self.wh).color(self.color);
+        draw.rect()
+            .xy(self.center)
+            .wh(self.wh)
+            .color(self.color)
+            .no_fill()
+            .stroke_color(self.get_color());
+
     }
     fn set_color(&mut self, color: Hsv) {
         self.color = color;
@@ -264,9 +270,8 @@ impl Rectangle_Custom {
     }
 
     pub fn rect_to_pixels(&mut self, rb_corner: Point2) {
-        
         // need to put this in a new thread, now it is blocking
-        
+
         let d = rb_corner - self.get_center();
         let x1 = rb_corner.x - d.x * 2.;
         let x2 = rb_corner.x;
@@ -276,7 +281,6 @@ impl Rectangle_Custom {
         let lt = pt2(x1, y1);
         let lb = pt2(x1, y2);
         let rt = pt2(x2, y1);
-        let rb = pt2(x2, y2);
 
         // create new lines
         let height: i32 = ((lb.x - lt.x).pow(2) as f32 + (lb.y - lt.y).pow(2) as f32)
